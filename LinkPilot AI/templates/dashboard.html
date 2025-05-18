@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="navbar">
+        <div class="navbar-brand">LinkPilot AI</div>
+        <button id="mobile-menu-button" class="mobile-menu-button">☰</button>
+    </div>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <ul class="sidebar-menu">
+                <li><a href="/dashboard" class="active">Dashboard</a></li>
+                <li><a href="/admin">Admin Panel</a></li>
+                <li><a href="/settings">Settings</a></li>
+                <li><a href="/logout">Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1>Dashboard</h1>
+            
+            <!-- Link Status Overview -->
+            <div class="overview-stats">
+                <div class="stat-card">
+                    <h3>Total Links</h3>
+                    <p class="stat-number">{{ total_links }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Processing</h3>
+                    <p class="stat-number">{{ processing_links }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Completed</h3>
+                    <p class="stat-number">{{ completed_links }}</p>
+                </div>
+            </div>
+
+            <!-- Link Cards -->
+            <div class="link-cards">
+                {% for link in links %}
+                <div class="link-card" id="link-{{ link.id }}">
+                    <div class="link-card-header">
+                        <h3>{{ link.url }}</h3>
+                        <span class="link-card-status status-{{ link.status }}">{{ link.status }}</span>
+                    </div>
+                    <div class="link-preview">
+                        <img src="{{ link.preview_url if link.preview_url else '/static/images/default-preview.png' }}" alt="Link Preview">
+                    </div>
+                    <div class="link-card-footer">
+                        <p>Opened: {{ link.opened_count }} times</p>
+                        <p>Last opened: {{ link.last_opened }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

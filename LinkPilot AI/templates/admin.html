@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+.link-preview-thumb{width:100px;height:50px;object-fit:cover;border-radius:4px;margin-left:1rem}
+.notification{position:fixed;top:20px;right:20px;padding:10px 20px;border-radius:4px;z-index:1000}
+.notification-info{background-color:#e2e8f0;color:#475569}
+.notification-error{background-color:#fee2e2;color:#ef4444}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="navbar">
+        <div class="navbar-brand">LinkPilot AI - Admin</div>
+        <button id="mobile-menu-button" class="mobile-menu-button">☰</button>
+    </div>
+
+    <div class="dashboard">
+        <div class="sidebar">
+            <ul class="sidebar-menu">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/admin" class="active">Admin Panel</a></li>
+                <li><a href="/settings">Settings</a></li>
+                <li><a href="/logout">Logout</a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <h1>Admin Panel</h1>
+            
+            <div class="admin-panel">
+                <h2>Add New Link</h2>
+                <form id="add-link-form" class="add-link-form" method="POST">
+                    <div class="form-group">
+                        <label for="link-url">URL</label>
+                        <input type="url" id="link-url" name="url" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">Priority</label>
+                        <select id="priority" name="priority">
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Link</button>
+                </form>
+            </div>
+
+            <div class="admin-panel">
+                <h2>Link Queue</h2>
+                <div class="link-queue">
+                    {% for link in queue %}
+                    <div class="link-queue-item">
+                        <div class="link-info">
+                            <span class="link-url">{{ link.url }}</span>
+                            <span class="link-priority">Priority: {{ link.priority }}</span>
+                            <span class="link-status">Status: {{ link.status }}</span>
+                            <img src="{{ link.preview_url if link.preview_url else '/static/images/default-preview.png' }}" 
+                                 alt="Preview" class="link-preview-thumb">
+                        </div>
+                        <div class="link-actions">
+                            <button class="btn btn-primary" onclick="moveUp({{ link.id }})">↑</button>
+                            <button class="btn btn-primary" onclick="moveDown({{ link.id }})">↓</button>
+                            <button class="btn btn-danger" onclick="removeLink({{ link.id }})">×</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function moveUp(linkId) {
+    const button = event.target;
+    button.disabled = true;
+    button.textContent = 'Moving...';
+
+    fetch(`/api/links/${linkId}/move/up`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to move link');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        showNotification(error.message, 'error');
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.textContent = '↑';
+    });
+}
+
+function moveDown(linkId) {
+    const button = event.target;
+    button.disabled = true;
+    button.textContent = 'Moving...';
+
+    fetch(`/api/links/${linkId}/move/down`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to move link');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        showNotification(error.message, 'error');
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.textContent = '↓';
+    });
+}
+
+function removeLink(linkId) {
+    if (!confirm('Are you sure you want to remove this link?')) {
+        return;
+    }
+
+    const button = event.target;
+    button.disabled = true;
+    button.textContent = 'Removing...';
+
+    fetch(`/api/links/${linkId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to remove link');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        showNotification(error.message, 'error');
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.textContent = '×';
+    });
+}
+
+// Add CSRF token to forms
+document.addEventListener('DOMContentLoaded', () => {
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = document.querySelector('meta[name="csrf-token"]').content;
+        form.appendChild(csrfInput);
+    });
+});
+</script>
+{% endblock %}
